@@ -22,6 +22,18 @@ def predictions_0(data):
     return pd.Series(predictions)
 
 
+# Model with one feature:
+# - predict a passenger survived if they are female
+def predictions_1(data):
+    predictions = []
+    for _, passenger in data.iterrows():
+        if (passenger["Sex"] == "female"):
+            predictions.append(1)
+        else:
+            predictions.append(0)
+    return pd.Series(predictions)
+
+
 if __name__ == '__main__':
     # Loading dataset
     in_file = "titanic_data.csv"
@@ -39,4 +51,7 @@ if __name__ == '__main__':
     print(accuracy_score(outcomes[:5], predictions))
 
     predictions = predictions_0(data)
+    print(accuracy_score(outcomes, predictions))
+
+    predictions = predictions_1(data)
     print(accuracy_score(outcomes, predictions))
