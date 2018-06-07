@@ -49,6 +49,22 @@ def predictions_2(data):
     return pd.Series(predictions)
 
 
+# Model with two features:
+# - predict a passenger survived if they are female
+# - predict a passenger survived if they are younger than 15 and passenger
+#   class is 1 or 2
+def predictions_3(data):
+    predictions = []
+    for _, passenger in data.iterrows():
+        if (passenger["Sex"] == "female"):
+            predictions.append(1)
+        elif (passenger["Age"] < 15 and (passenger["Pclass"] == 1 or passenger["Pclass"] == 2)):
+            predictions.append(1)
+        else:
+            predictions.append(0)
+    return pd.Series(predictions)
+
+
 if __name__ == '__main__':
     # Loading dataset
     in_file = "titanic_data.csv"
@@ -72,4 +88,7 @@ if __name__ == '__main__':
     print(accuracy_score(outcomes, predictions))
 
     predictions = predictions_2(data)
+    print(accuracy_score(outcomes, predictions))
+
+    predictions = predictions_3(data)
     print(accuracy_score(outcomes, predictions))
