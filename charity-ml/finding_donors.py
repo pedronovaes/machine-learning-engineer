@@ -2,6 +2,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 from IPython.display import display
 
 
@@ -20,8 +21,8 @@ if __name__ == '__main__':
 
     # Making some data exploration
     n_records = len(data)
-    n_greater_50k = len(data[data.income == '>50K'])
-    n_at_most_50k = len(data[data.income == '<=50K'])
+    n_greater_50k = len(data[data['income'] == '>50K'])
+    n_at_most_50k = len(data[data['income'] == '<=50K'])
     greater_percent = n_greater_50k / n_records * 100
 
     # Print the results
@@ -30,4 +31,18 @@ if __name__ == '__main__':
     print("Individuals making at most $50,000: {}".format(n_at_most_50k))
     print("Percentage of individuals making more than $50,000: {0:.2f}%".format(greater_percent))
 
-    plot_relationships(x_axis="age", hue="income", data=data)
+    # plot_relationships(x_axis="age", hue="income", data=data)
+
+    # Preparing the data
+    # --- Transforming skewed continuous features
+    # --- Split the data into features and target lagel
+    income_raw = data['income']
+    features_raw = data.drop('income', axis=1)
+
+    # --- Log-transform the skewed features
+    skewed = ['capital-gain', 'capital-loss']
+    features_log_transformed = pd.DataFrame(data=features_raw)
+    display(features_log_transformed.head())
+    print('')
+    features_log_transformed[skewed] = features_raw[skewed].apply(lambda x: np.log(x + 1))
+    display(features_log_transformed.head())
