@@ -44,6 +44,23 @@ def preprocessing(data):
     return features_final, income
 
 
+# Naive model that always predict an individual made more than $50,000
+def naive_predictor_performance(income, n_records):
+    TP = np.sum(income)
+    FP = income.count() - TP
+    TN = 0
+    FN = 0
+
+    # Calculate accuracy, precision and recall
+    accuracy = TP / n_records
+    precision = TP / (TP + FP)
+    recall = TP / (TP + FN)
+
+    # Calculate F-score for beta = 0.5
+    fscore = (1 + 0.5 ** 2) * precision * recall / ((0.5 ** 2 * precision) + recall)
+    print("Naive Predictor: [Accuracy score: {:.4f}, F-score: {:.4f}]".format(accuracy, fscore))
+
+
 if __name__ == '__main__':
     # Loading dataset
     in_file = 'census.csv'
@@ -65,6 +82,7 @@ if __name__ == '__main__':
 
     # plot_relationships(x_axis="age", hue="income", data=data)
 
+    # Data Preprocessing
     features_final, income = preprocessing(data)
 
     # Shuffle and Split data
@@ -72,3 +90,6 @@ if __name__ == '__main__':
 
     print("Training set has {} samples.".format(X_train.shape[0]))
     print("Testing set has {} samples.".format(X_test.shape[0]))
+
+    # Naive Predictor Performance
+    naive_predictor_performance(income, n_records)
