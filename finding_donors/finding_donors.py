@@ -8,9 +8,19 @@ from time import time
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import fbeta_score, accuracy_score, make_scorer
+from sklearn.base import clone
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB
+
+
+def print_results(results):
+    # Printing out the values
+    for i in results.items():
+        print("")
+        print(i[0])
+        display(pd.DataFrame(i[1]).rename(columns={0: '1%', 1: '10%', 2: '100%'}))
+    print("")
 
 
 def plot_relationships(x_axis, hue, data, y_axis=None):
@@ -49,7 +59,6 @@ def preprocessing(data):
     return features_final, income
 
 
-# Naive model that always predict an individual made more than $50,000
 def naive_predictor_performance(income, n_records):
     TP = np.sum(income)
     FP = income.count() - TP
@@ -104,12 +113,86 @@ def train_predict(learner, sample_size, X_train, y_train, X_test, y_test):
     return results
 
 
-def print_results(results):
-    # Printing out the values
-    for i in results.items():
-        print("")
-        print(i[0])
-        display(pd.DataFrame(i[1]).rename(columns={0: '1%', 1: '10%', 2: '100%'}))
+def models_evaluation(X_train, X_test, y_train, y_test):
+    # Initial model validation
+    clf_A = GaussianNB()
+    clf_B = LogisticRegression(random_state=42)
+    clf_C = GradientBoostingClassifier(random_state=42)
+
+    samples_100 = len(y_train)
+    samples_10 = int(len(y_train) / 10)
+    samples_1 = int(len(y_train) / 100)
+
+    results = {}
+    for clf in [clf_A, clf_B, clf_C]:
+        clf_name = clf.__class__.__name__
+        results[clf_name] = {}
+        for i, samples in enumerate([samples_1, samples_10, samples_100]):
+            results[clf_name][i] = train_predict(clf, samples, X_train, y_train, X_test, y_test)
+
+    print_results(results)
+
+
+def improving_results(X_train, X_test, y_train, y_test):
+    start = time()
+
+    # Using grid search to improve best model
+    clf = GradientBoostingClassifier(random_state=42)
+
+    parameters = {
+        'learning_rate': [0.1, 1, 1.3],
+        'n_estimators': [100, 300, 500]
+    }
+
+    # Make an fbeta_score scoring object using make_scorer()
+    scorer = make_scorer(fbeta_score, beta=0.5)
+
+    # Perform grid search
+    grid_obj = GridSearchCV(clf, parameters, scoring=scorer, n_jobs=4, verbose=10)
+
+    # Fit the grid search
+    grid_fit = grid_obj.fit(X_train, y_train)
+
+    # Get the estimator
+    best_clf = grid_fit.best_estimator_
+
+    # Make predictions using unoptimized and optimized model
+    predictions = (clf.fit(X_train, y_train)).predict(X_test)
+    best_predictions = best_clf.predict(X_test)
+
+    end = time()
+
+    print("Unoptimized model\n------")
+    print("Accuracy score on testing data: {:.4f}".format(accuracy_score(y_test, predictions)))
+    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, predictions, beta=0.5)))
+    print("\nOptimized Model\n------")
+    print("Accuracy score on testing data: {:.4f}".format(accuracy_score(y_test, best_predictions)))
+    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, best_predictions, beta=0.5)))
+    print("Improving results in {:.2f} seconds".format(end - start))
+
+    return best_clf, best_predictions
+
+
+def extracting_features(best_clf, best_predictions, X_train, X_test, y_train, y_test):
+    # Extracting feature importance
+    model = GradientBoostingClassifier(random_state=42)
+    model.fit(X_train, y_train)
+    importances = model.feature_importances_
+
+    # Reduce the feature space
+    X_train_reduced = X_train[X_train.columns.values[(np.argsort(importances)[::-1])[:5]]]
+    X_test_reduced = X_test[X_test.columns.values[(np.argsort(importances)[::-1])[:5]]]
+
+    clf = (clone(best_clf)).fit(X_train_reduced, y_train)
+
+    reduced_predictions = clf.predict(X_test_reduced)
+
+    print("Final Model trained on full data\n------")
+    print("Accuracy on testing data: {:.4f}".format(accuracy_score(y_test, best_predictions)))
+    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, best_predictions, beta=0.5)))
+    print("\nFinal Model trained on reduced data\n------")
+    print("Accuracy on testing data: {:.4f}".format(accuracy_score(y_test, reduced_predictions)))
+    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, reduced_predictions, beta=0.5)))
 
 
 if __name__ == '__main__':
@@ -145,52 +228,10 @@ if __name__ == '__main__':
     # Naive Predictor Performance
     naive_predictor_performance(income, n_records)
 
-    # Initial Model Validation
-    clf_A = GaussianNB()
-    clf_B = LogisticRegression(random_state=42)
-    clf_C = GradientBoostingClassifier(random_state=42)
-
-    samples_100 = len(y_train)
-    samples_10 = int(len(y_train) / 10)
-    samples_1 = int(len(y_train) / 100)
-
-    results = {}
-    for clf in [clf_A, clf_B, clf_C]:
-        clf_name = clf.__class__.__name__
-        results[clf_name] = {}
-        for i, samples in enumerate([samples_1, samples_10, samples_100]):
-            results[clf_name][i] = train_predict(clf, samples, X_train, y_train, X_test, y_test)
-
-    print_results(results)
-
-    # Using grid search to improve best model
-    clf = GradientBoostingClassifier(random_state=42)
-
-    parameters = {
-        'learning_rate': [0.1, 1, 1.3],
-        'n_estimators': [100, 300, 500]
-    }
-
-    # Make an fbeta_score scoring object using make_scorer()
-    scorer = make_scorer(fbeta_score, beta=0.5)
-
-    # Perform grid search
-    grid_obj = GridSearchCV(clf, parameters, scoring=scorer, n_jobs=4, verbose=10)
-
-    # Fit the grid search
-    grid_fit = grid_obj.fit(X_train, y_train)
-
-    # Get the estimator
-    best_clf = grid_fit.best_estimator_
-
-    # Make predictions using unoptimized and optimized model
-    predictions = (clf.fit(X_train, y_train)).predict(X_test)
-    best_predictions = best_clf.predict(X_test)
-
-    print("Unoptimized model\n------")
-    print("Accuracy score on testing data: {:.4f}".format(accuracy_score(y_test, predictions)))
-    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, predictions, beta=0.5)))
-    print("\nOptimized Model\n------")
-    print("Accuracy score on testing data: {:.4f}".format(accuracy_score(y_test, best_predictions)))
-    print("F-score on testing data: {:.4f}".format(fbeta_score(y_test, best_predictions, beta=0.5)))
-    print(best_clf)
+    # Creating a training and predicting pipeline:
+    # 1 - Training three supervised models
+    # 2 - Improving results of the best model for this dataset (Gradient Boosting)
+    # 3 - Extracting the most important features and training Gradient Boosting with these features
+    models_evaluation(X_train, X_test, y_train, y_test)
+    best_clf, best_predictions = improving_results(X_train, X_test, y_train, y_test)
+    extracting_features(best_clf, best_predictions, X_train, X_test, y_train, y_test)
