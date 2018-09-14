@@ -1,4 +1,3 @@
-# Importing libraries necessary for this project
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -23,9 +22,8 @@ def print_results(results):
     print("")
 
 
-def plot_relationships(x_axis, hue, data, y_axis=None):
-    sns.countplot(x=x_axis, y=y_axis,  hue=hue, data=data)
-    plt.tight_layout()
+def plot_relationships(data):
+    sns.pairplot(data, palette='Set1', hue='income')
     plt.show()
 
 
@@ -200,7 +198,8 @@ if __name__ == '__main__':
     in_file = 'census.csv'
     data = pd.read_csv(in_file)
 
-    # display(data.head())
+    display(data.head())
+    print(data.describe())
 
     # Making some data exploration
     n_records = len(data)
@@ -214,7 +213,7 @@ if __name__ == '__main__':
     print("Individuals making at most $50,000: {}".format(n_at_most_50k))
     print("Percentage of individuals making more than $50,000: {0:.2f}%".format(greater_percent))
 
-    # plot_relationships(x_axis="age", hue="income", data=data)
+    plot_relationships(data)
 
     # Data Preprocessing
     features_final, income = preprocessing(data)
