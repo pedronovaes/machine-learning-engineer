@@ -31,7 +31,17 @@ def preprocessing(data):
     log_data = np.log(data)
     pd.plotting.scatter_matrix(log_data, alpha=0.3, figsize=(20, 20), diagonal='kde')
     plt.show()
-    return log_data
+
+    # Removing outliers
+    for feature in log_data.keys():
+        Q1 = np.percentile(log_data[feature], 25)
+        Q3 = np.percentile(log_data[feature], 75)
+        step = (Q3 - Q1) * 1.5
+
+    outliers = [65, 66, 75, 128, 154]
+    good_data = log_data.drop(log_data.index[outliers]).reset_index(drop=True)
+
+    return good_data
 
 
 if __name__ == '__main__':
@@ -43,4 +53,4 @@ if __name__ == '__main__':
     # Scatter matrix and heatmap plots
     initial_exploratory_analysis(data)
 
-    log_data = preprocessing(data)
+    good_data = preprocessing(data)
